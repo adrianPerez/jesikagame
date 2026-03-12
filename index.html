@@ -250,6 +250,47 @@ html, body {
 </div>
 
 <script>
+// ===================== ASSET LOADER =====================
+const ASSET_PATH = 'assets/';
+const loadedImages = {};
+
+function loadImage(name, filename) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { loadedImages[name] = img; resolve(true); };
+    img.onerror = () => { resolve(false); };
+    img.src = ASSET_PATH + filename;
+  });
+}
+
+async function loadAllAssets() {
+  const assets = [
+    // Tile assets
+    ['tile_grass', 'tile_grass.png'],
+    ['tile_path', 'tile_path.png'],
+    ['tile_water', 'tile_water.png'],
+    ['tile_bridge', 'tile_bridge.png'],
+    ['tile_tree', 'tile_tree.png'],
+    ['tile_roof', 'tile_roof.png'],
+    ['tile_wall', 'tile_wall.png'],
+    ['tile_wall_window', 'tile_wall_window.png'],
+    ['tile_door', 'tile_door.png'],
+    ['tile_fence', 'tile_fence.png'],
+    ['flower_pink', 'flower_pink.png'],
+    ['flower_yellow', 'flower_yellow.png'],
+    ['flower_purple', 'flower_purple.png'],
+    // Character assets
+    ['player', 'player.png'],
+    ['npc_rosa', 'npc_rosa.png'],
+    ['npc_carmen', 'npc_carmen.png'],
+    ['npc_lucia', 'npc_lucia.png'],
+    ['npc_elena', 'npc_elena.png'],
+    ['npc_abuela', 'npc_abuela.png'],
+    ['npc_sofia', 'npc_sofia.png'],
+  ];
+  await Promise.all(assets.map(([name, file]) => loadImage(name, file)));
+}
+
 // ===================== GAME ENGINE =====================
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -327,11 +368,98 @@ function isSolid(col, row) {
 }
 
 // ===================== DRAW TILES =====================
+// Map tile types to asset names
+const TILE_ASSET_MAP = {
+  0: 'tile_grass',
+  1: 'tile_path',
+  2: 'tile_water',
+  6: 'tile_tree',
+  4: 'tile_roof',
+  5: 'tile_door',
+  7: 'tile_fence',
+  9: 'tile_bridge',
+};
+
+function getFlowerAsset(col, row) {
+  const idx = (col * 3 + row * 7) % 3;
+  return ['flower_pink', 'flower_yellow', 'flower_purple'][idx];
+}
+
+function getWallAsset(col, row) {
+  if ((col + row) % 3 === 0) return 'tile_wall_window';
+  return 'tile_wall';
+}
+
 function drawTile(col, row) {
   const x = col * TILE;
   const y = row * TILE;
   const t = MAP[row][col];
 
+  // Try image-based rendering first
+  if (t === 8) {
+    // Flower: draw grass underneath, then flower
+    if (loadedImages['tile_grass']) {
+      ctx.drawImage(loadedImages['tile_grass'], x, y, TILE, TILE);
+    } else {
+      ctx.fillStyle = (col + row) % 2 === 0 ? COLORS.grass1 : COLORS.grass2;
+      ctx.fillRect(x, y, TILE, TILE);
+    }
+    const flowerAsset = getFlowerAsset(col, row);
+    if (loadedImages[flowerAsset]) {
+      ctx.drawImage(loadedImages[flowerAsset], x, y, TILE, TILE);
+      return;
+    }
+    // Fallback flower drawing
+    const fc = [COLORS.flower1, COLORS.flower2, COLORS.flower3][(col * 3 + row * 7) % 3];
+    ctx.fillStyle = '#3a7a2a';
+    ctx.fillRect(x + 14, y + 16, 4, 14);
+    ctx.fillStyle = fc;
+    ctx.fillRect(x + 10, y + 10, 12, 10);
+    ctx.fillStyle = '#f0e060';
+    ctx.fillRect(x + 14, y + 13, 4, 4);
+    return;
+  }
+
+  if (t === 3) {
+    // Wall: check for window variant
+    const wallAsset = getWallAsset(col, row);
+    if (loadedImages[wallAsset]) {
+      ctx.drawImage(loadedImages[wallAsset], x, y, TILE, TILE);
+      return;
+    }
+    // Fallback wall drawing
+    ctx.fillStyle = COLORS.wall;
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = COLORS.wallDark;
+    ctx.fillRect(x, y, TILE, 2);
+    ctx.fillRect(x, y + 15, TILE, 2);
+    if ((col + row) % 3 === 0) {
+      ctx.fillStyle = COLORS.window_c;
+      ctx.fillRect(x + 10, y + 8, 12, 12);
+      ctx.fillStyle = COLORS.wallDark;
+      ctx.fillRect(x + 15, y + 8, 2, 12);
+      ctx.fillRect(x + 10, y + 13, 12, 2);
+    }
+    return;
+  }
+
+  // All other tiles: try asset, then fallback
+  const assetName = TILE_ASSET_MAP[t];
+  if (assetName && loadedImages[assetName]) {
+    // For tiles that sit on grass (tree, fence), draw grass first
+    if (t === 6 || t === 7) {
+      if (loadedImages['tile_grass']) {
+        ctx.drawImage(loadedImages['tile_grass'], x, y, TILE, TILE);
+      } else {
+        ctx.fillStyle = (col + row) % 2 === 0 ? COLORS.grass1 : COLORS.grass2;
+        ctx.fillRect(x, y, TILE, TILE);
+      }
+    }
+    ctx.drawImage(loadedImages[assetName], x, y, TILE, TILE);
+    return;
+  }
+
+  // ---- Fallback programmatic drawing ----
   // Base grass
   ctx.fillStyle = (col + row) % 2 === 0 ? COLORS.grass1 : COLORS.grass2;
   ctx.fillRect(x, y, TILE, TILE);
@@ -354,21 +482,6 @@ function drawTile(col, row) {
       const waveOff = (Date.now() / 500 + col) % 4;
       ctx.fillRect(x + 4 + waveOff * 2, y + 8, 8, 2);
       ctx.fillRect(x + 12 - waveOff, y + 20, 10, 2);
-      break;
-    case 3: // Wall
-      ctx.fillStyle = COLORS.wall;
-      ctx.fillRect(x, y, TILE, TILE);
-      ctx.fillStyle = COLORS.wallDark;
-      ctx.fillRect(x, y, TILE, 2);
-      ctx.fillRect(x, y + 15, TILE, 2);
-      // Window on some walls
-      if ((col + row) % 3 === 0) {
-        ctx.fillStyle = COLORS.window_c;
-        ctx.fillRect(x + 10, y + 8, 12, 12);
-        ctx.fillStyle = COLORS.wallDark;
-        ctx.fillRect(x + 15, y + 8, 2, 12);
-        ctx.fillRect(x + 10, y + 13, 12, 2);
-      }
       break;
     case 4: // Roof
       ctx.fillStyle = COLORS.roof;
@@ -400,15 +513,6 @@ function drawTile(col, row) {
       ctx.fillRect(x + 4, y + 4, 4, 24);
       ctx.fillRect(x + 24, y + 4, 4, 24);
       break;
-    case 8: // Flower
-      const fc = [COLORS.flower1, COLORS.flower2, COLORS.flower3][(col * 3 + row * 7) % 3];
-      ctx.fillStyle = '#3a7a2a';
-      ctx.fillRect(x + 14, y + 16, 4, 14);
-      ctx.fillStyle = fc;
-      ctx.fillRect(x + 10, y + 10, 12, 10);
-      ctx.fillStyle = '#f0e060';
-      ctx.fillRect(x + 14, y + 13, 4, 4);
-      break;
     case 9: // Bridge
       ctx.fillStyle = COLORS.water;
       ctx.fillRect(x, y, TILE, TILE);
@@ -422,9 +526,31 @@ function drawTile(col, row) {
 }
 
 // ===================== DRAW CHARACTER =====================
-function drawCharacter(col, row, dir, skinColor, hairColor, outfitColor, outfitColor2, isPlayer) {
+// Direction order in spritesheets: 0=down, 1=up, 2=left, 3=right
+function drawCharacter(col, row, dir, skinColor, hairColor, outfitColor, outfitColor2, isPlayer, spriteKey) {
   const x = col * TILE;
   const y = row * TILE;
+
+  // Try to draw from loaded sprite image
+  const img = loadedImages[spriteKey];
+  if (img) {
+    if (img.width > TILE) {
+      // Spritesheet: 128x32 (4 frames of 32x32)
+      ctx.drawImage(img, dir * TILE, 0, TILE, TILE, x, y, TILE, TILE);
+    } else {
+      // Single static sprite: 32x32
+      ctx.drawImage(img, x, y, TILE, TILE);
+    }
+    // Still draw player indicator on top
+    if (isPlayer) {
+      ctx.fillStyle = '#f0c0dd';
+      ctx.fillRect(x + 14, y - 4, 4, 4);
+      ctx.fillRect(x + 12, y - 2, 8, 2);
+    }
+    return;
+  }
+
+  // ---- Fallback programmatic drawing ----
   const sc = skinColor;
   const hc = hairColor;
   const oc = outfitColor;
@@ -967,10 +1093,10 @@ function draw() {
   for (const e of entities) {
     if (e.isNPC) {
       const npc = npcs.find(n => n.id === e.id);
-      drawCharacter(e.col, e.row, e.dir, e.skin, e.hair, e.outfit, e.outfit2, false);
+      drawCharacter(e.col, e.row, e.dir, e.skin, e.hair, e.outfit, e.outfit2, false, 'npc_' + e.id);
       drawNPCIndicator(npc);
     } else {
-      drawCharacter(e.col, e.row, e.dir, COLORS.skin1, COLORS.hair_brown, '#e080b0', '#f0c0dd', true);
+      drawCharacter(e.col, e.row, e.dir, COLORS.skin1, COLORS.hair_brown, '#e080b0', '#f0c0dd', true, 'player');
     }
   }
 
@@ -985,7 +1111,10 @@ function draw() {
 }
 
 // ===================== START =====================
-document.getElementById('startBtn').addEventListener('click', () => {
+document.getElementById('startBtn').addEventListener('click', async () => {
+  document.getElementById('startBtn').textContent = 'Cargando...';
+  document.getElementById('startBtn').disabled = true;
+  await loadAllAssets();
   gameStarted = true;
   document.getElementById('titleScreen').style.display = 'none';
   setupMobile();
