@@ -34,11 +34,41 @@ html, body {
   max-height: 55vh;
   overflow-y: auto;
 }
+#dialogueHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+#portraitContainer {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #e6a0c4;
+  border-radius: 6px;
+  background: #2a1a3e;
+  flex-shrink: 0;
+  overflow: hidden;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+#portraitContainer canvas {
+  display: block;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+#portraitContainer img {
+  display: block;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 #speakerName {
   color: #f0c0dd;
   font-weight: bold;
   font-size: 16px;
-  margin-bottom: 6px;
 }
 #dialogueText {
   line-height: 1.5;
@@ -230,7 +260,10 @@ html, body {
 <div id="questProgress"></div>
 
 <div id="dialogueBox">
-  <div id="speakerName"></div>
+  <div id="dialogueHeader">
+    <div id="portraitContainer"></div>
+    <div id="speakerName"></div>
+  </div>
   <div id="dialogueText"></div>
   <div id="choicesContainer"></div>
   <div id="continueHint"></div>
@@ -287,6 +320,13 @@ async function loadAllAssets() {
     ['npc_elena', 'npc_elena.png'],
     ['npc_abuela', 'npc_abuela.png'],
     ['npc_sofia', 'npc_sofia.png'],
+    // Headshot/portrait assets
+    ['head_rosa', 'head_rosa.png'],
+    ['head_carmen', 'head_carmen.png'],
+    ['head_lucia', 'head_lucia.png'],
+    ['head_elena', 'head_elena.png'],
+    ['head_abuela', 'head_abuela.png'],
+    ['head_sofia', 'head_sofia.png'],
   ];
   await Promise.all(assets.map(([name, file]) => loadImage(name, file)));
 }
@@ -677,8 +717,8 @@ const npcs = [
   {
     id: 'sofia',
     name: 'Sofia',
-    col: 16, row: 14,
-    dir: 2,
+    col: 11, row: 13,
+    dir: 0,
     skin: COLORS.skin2, hair: COLORS.hair_brown, outfit: COLORS.dress_yellow, outfit2: '#b0966a',
     personality: 'curiosa',
     questDone: false,
@@ -842,6 +882,56 @@ function updateInventoryUI() {
   document.getElementById('questProgress').textContent = questsCompleted + '/' + TOTAL_QUESTS;
 }
 
+// ===================== PORTRAIT RENDERING =====================
+function renderPortrait(npc) {
+  const container = document.getElementById('portraitContainer');
+  container.innerHTML = '';
+
+  // Try loaded headshot image first
+  const headImg = loadedImages['head_' + npc.id];
+  if (headImg) {
+    const img = document.createElement('img');
+    img.src = headImg.src;
+    container.appendChild(img);
+    return;
+  }
+
+  // Fallback: draw programmatic portrait on a small canvas
+  const pCanvas = document.createElement('canvas');
+  pCanvas.width = 32;
+  pCanvas.height = 32;
+  const pCtx = pCanvas.getContext('2d');
+
+  // Background
+  pCtx.fillStyle = '#1a1a2e';
+  pCtx.fillRect(0, 0, 32, 32);
+
+  // Head
+  pCtx.fillStyle = npc.skin;
+  pCtx.fillRect(10, 8, 12, 14);
+
+  // Hair
+  pCtx.fillStyle = npc.hair;
+  pCtx.fillRect(8, 5, 16, 7);
+  pCtx.fillRect(8, 5, 4, 14);
+  pCtx.fillRect(20, 5, 4, 14);
+
+  // Eyes
+  pCtx.fillStyle = '#2a2a2a';
+  pCtx.fillRect(13, 14, 2, 3);
+  pCtx.fillRect(19, 14, 2, 3);
+
+  // Mouth
+  pCtx.fillStyle = '#c06060';
+  pCtx.fillRect(15, 19, 4, 2);
+
+  // Outfit hint at bottom
+  pCtx.fillStyle = npc.outfit;
+  pCtx.fillRect(8, 24, 16, 8);
+
+  container.appendChild(pCanvas);
+}
+
 // ===================== DIALOGUE SYSTEM =====================
 function showDialogue(npc) {
   const data = DIALOGUES[npc.id];
@@ -859,6 +949,7 @@ function showDialogue(npc) {
   const hintEl = document.getElementById('continueHint');
 
   box.style.display = 'block';
+  renderPortrait(npc);
   nameEl.textContent = npc.name;
   textEl.textContent = phaseData.text;
   choicesEl.innerHTML = '';
