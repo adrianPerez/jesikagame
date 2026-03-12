@@ -896,38 +896,39 @@ function renderPortrait(npc) {
     return;
   }
 
-  // Fallback: draw programmatic portrait on a small canvas
+  // Fallback: draw programmatic portrait on a 256x256 canvas
   const pCanvas = document.createElement('canvas');
-  pCanvas.width = 32;
-  pCanvas.height = 32;
+  pCanvas.width = 256;
+  pCanvas.height = 256;
   const pCtx = pCanvas.getContext('2d');
+  const S = 8; // scale factor (256/32 = 8)
 
   // Background
   pCtx.fillStyle = '#1a1a2e';
-  pCtx.fillRect(0, 0, 32, 32);
+  pCtx.fillRect(0, 0, 256, 256);
 
   // Head
   pCtx.fillStyle = npc.skin;
-  pCtx.fillRect(10, 8, 12, 14);
+  pCtx.fillRect(10*S, 8*S, 12*S, 14*S);
 
   // Hair
   pCtx.fillStyle = npc.hair;
-  pCtx.fillRect(8, 5, 16, 7);
-  pCtx.fillRect(8, 5, 4, 14);
-  pCtx.fillRect(20, 5, 4, 14);
+  pCtx.fillRect(8*S, 5*S, 16*S, 7*S);
+  pCtx.fillRect(8*S, 5*S, 4*S, 14*S);
+  pCtx.fillRect(20*S, 5*S, 4*S, 14*S);
 
   // Eyes
   pCtx.fillStyle = '#2a2a2a';
-  pCtx.fillRect(13, 14, 2, 3);
-  pCtx.fillRect(19, 14, 2, 3);
+  pCtx.fillRect(13*S, 14*S, 2*S, 3*S);
+  pCtx.fillRect(19*S, 14*S, 2*S, 3*S);
 
   // Mouth
   pCtx.fillStyle = '#c06060';
-  pCtx.fillRect(15, 19, 4, 2);
+  pCtx.fillRect(15*S, 19*S, 4*S, 2*S);
 
   // Outfit hint at bottom
   pCtx.fillStyle = npc.outfit;
-  pCtx.fillRect(8, 24, 16, 8);
+  pCtx.fillRect(8*S, 24*S, 16*S, 8*S);
 
   container.appendChild(pCanvas);
 }
