@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Villa Belleza - El Pueblo de la Moda</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #1a1a2e;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#gameCanvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+#dialogueBox {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(20, 10, 30, 0.95);
+  border-top: 3px solid #e6a0c4;
+  padding: 12px 16px;
+  color: #fff;
+  font-family: monospace;
+  font-size: 15px;
+  z-index: 100;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+#speakerName {
+  color: #f0c0dd;
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+#dialogueText {
+  line-height: 1.5;
+  margin-bottom: 10px;
+  min-height: 40px;
+}
+#choicesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.choice-btn {
+  background: #2a1a3e;
+  border: 2px solid #e6a0c4;
+  color: #fff;
+  padding: 10px 14px;
+  font-family: monospace;
+  font-size: 14px;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.choice-btn:hover, .choice-btn:active {
+  background: #4a2a6e;
+}
+#continueHint {
+  color: #a080b0;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 6px;
+  animation: blink 1.2s infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+#inventoryBar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(20, 10, 30, 0.9);
+  border-bottom: 2px solid #e6a0c4;
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  z-index: 90;
+  gap: 6px;
+  min-height: 44px;
+  flex-wrap: wrap;
+}
+#inventoryLabel {
+  color: #f0c0dd;
+  font-family: monospace;
+  font-size: 12px;
+  margin-right: 4px;
+}
+.inv-item {
+  background: #2a1a3e;
+  border: 1px solid #c080a0;
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: #fff;
+  font-family: monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+#questProgress {
+  position: fixed;
+  top: 0; right: 8px;
+  color: #f0c0dd;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 91;
+  padding: 6px;
+}
+#dpad {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 80;
+  width: 130px;
+  height: 130px;
+}
+.dpad-btn {
+  position: absolute;
+  width: 44px; height: 44px;
+  background: rgba(230, 160, 196, 0.35);
+  border: 2px solid rgba(230, 160, 196, 0.6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+.dpad-btn:active { background: rgba(230, 160, 196, 0.6); }
+#dpad-up    { top: 0; left: 43px; }
+#dpad-down  { bottom: 0; left: 43px; }
+#dpad-left  { top: 43px; left: 0; }
+#dpad-right { top: 43px; right: 0; }
+#actionBtn {
+  display: none;
+  position: fixed;
+  bottom: 50px;
+  right: 25px;
+  width: 64px; height: 64px;
+  background: rgba(230, 160, 196, 0.4);
+  border: 2px solid rgba(230, 160, 196, 0.7);
+  border-radius: 50%;
+  color: #fff;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  z-index: 80;
+  cursor: pointer;
+}
+#actionBtn:active { background: rgba(230, 160, 196, 0.7); }
+#titleScreen {
+  position: fixed;
+  inset: 0;
+  background: #1a1a2e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  color: #fff;
+  font-family: monospace;
+  text-align: center;
+  padding: 20px;
+}
+#titleScreen h1 {
+  color: #f0c0dd;
+  font-size: 28px;
+  margin-bottom: 8px;
+  text-shadow: 2px 2px 0 #4a2a6e;
+}
+#titleScreen p {
+  color: #c0a0d0;
+  font-size: 14px;
+  margin-bottom: 24px;
+  max-width: 320px;
+  line-height: 1.5;
+}
+#startBtn {
+  background: #4a2a6e;
+  border: 2px solid #e6a0c4;
+  color: #fff;
+  padding: 14px 40px;
+  font-family: monospace;
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+#startBtn:active { background: #6a3a8e; }
+#winScreen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 10, 30, 0.97);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  color: #fff;
+  font-family: monospace;
+  text-align: center;
+  padding: 20px;
+}
+#winScreen h1 { color: #f0c0dd; font-size: 26px; margin-bottom: 16px; }
+#winScreen p { color: #c0a0d0; font-size: 14px; max-width: 340px; line-height: 1.6; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div id="titleScreen">
+  <h1>Villa Belleza</h1>
+  <p>Ayuda a los habitantes del pueblo a resolver sus problemas. Habla con ellos, aprende lo que necesitan y consigue los objetos correctos. Al final, una recompensa especial te espera...</p>
+  <button id="startBtn">Jugar</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="inventoryBar">
+  <span id="inventoryLabel">Objetos:</span>
+</div>
+<div id="questProgress"></div>
+
+<div id="dialogueBox">
+  <div id="speakerName"></div>
+  <div id="dialogueText"></div>
+  <div id="choicesContainer"></div>
+  <div id="continueHint"></div>
+</div>
+
+<div id="dpad">
+  <div class="dpad-btn" id="dpad-up">&#9650;</div>
+  <div class="dpad-btn" id="dpad-down">&#9660;</div>
+  <div class="dpad-btn" id="dpad-left">&#9664;</div>
+  <div class="dpad-btn" id="dpad-right">&#9654;</div>
+</div>
+<button id="actionBtn">Hablar</button>
+
+<div id="winScreen">
+  <h1>Has Ganado!</h1>
+  <div id="winContent"></div>
+</div>
+
+<script>
+// ===================== GAME ENGINE =====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const TILE = 32;
+const COLS = 20;
+const ROWS = 15;
+
+let gameW, gameH, scale;
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  gameW = COLS * TILE;
+  gameH = ROWS * TILE;
+  scale = Math.min(w / gameW, h / gameH);
+  canvas.width = gameW;
+  canvas.height = gameH;
+  canvas.style.width = (gameW * scale) + 'px';
+  canvas.style.height = (gameH * scale) + 'px';
+  canvas.style.position = 'fixed';
+  canvas.style.left = ((w - gameW * scale) / 2) + 'px';
+  canvas.style.top = ((h - gameH * scale) / 2) + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ===================== PIXEL ART COLORS =====================
+const COLORS = {
+  grass1: '#4a8c3f', grass2: '#3d7a34', grass3: '#5a9c4f',
+  path: '#c4a86a', pathDark: '#b0966a',
+  water: '#4a7ab5', waterLight: '#5a8ac5',
+  wall: '#8a6a4a', wallDark: '#6a5040', roof: '#c04040', roofDark: '#a03030',
+  door: '#5a3a2a', window_c: '#7ab5d4',
+  tree: '#2a6a2a', treeDark: '#1a5a1a', trunk: '#6a4a2a',
+  flower1: '#e060a0', flower2: '#e0e060', flower3: '#a060e0',
+  fence: '#b0966a',
+  skin1: '#e8b88a', skin2: '#c49060', skin3: '#f0d0a0',
+  hair_black: '#2a2a2a', hair_brown: '#6a3a1a', hair_blonde: '#d4a030',
+  hair_red: '#c04020', hair_pink: '#e080b0', hair_white: '#e0e0e0',
+  dress_pink: '#e080b0', dress_blue: '#5080c0', dress_green: '#50a050',
+  dress_purple: '#8050a0', dress_red: '#c04040', dress_yellow: '#d0b040',
+  apron: '#f0f0f0',
+};
+
+// ===================== MAP =====================
+// 0=grass, 1=path, 2=water, 3=wall, 4=roof, 5=door, 6=tree, 7=fence, 8=flower, 9=bridge
+const MAP = [
+  [6,6,0,0,0,0,4,4,4,0,0,4,4,4,0,0,0,0,6,6],
+  [6,0,0,8,0,0,3,3,3,0,0,3,3,3,0,0,8,0,0,6],
+  [0,0,0,0,0,0,3,5,3,0,0,3,5,3,0,0,0,0,0,0],
+  [0,8,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,8,0],
+  [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
+  [0,0,6,0,1,0,0,8,0,0,0,0,8,0,0,1,0,6,0,0],
+  [4,4,4,0,1,0,0,0,0,0,0,0,0,0,0,1,0,4,4,4],
+  [3,3,3,0,1,0,0,0,0,8,0,0,0,0,0,1,0,3,3,3],
+  [3,5,3,0,1,0,0,0,0,0,0,0,0,0,0,1,0,3,5,3],
+  [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
+  [0,0,0,0,1,1,1,1,1,9,9,1,1,1,1,1,0,0,0,0],
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+  [0,0,0,4,4,4,0,0,0,0,0,0,4,4,4,0,0,0,0,0],
+  [0,8,0,3,3,3,0,0,8,0,8,0,3,3,3,0,0,8,0,6],
+  [0,0,0,3,5,3,0,0,0,0,0,0,3,5,3,0,0,0,0,6],
+];
+
+const SOLID_TILES = new Set([2, 3, 4, 6, 7]);
+
+function isSolid(col, row) {
+  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return true;
+  const t = MAP[row][col];
+  if (SOLID_TILES.has(t)) return true;
+  // Check NPC positions
+  for (const npc of npcs) {
+    if (npc.col === col && npc.row === row) return true;
+  }
+  return false;
+}
+
+// ===================== DRAW TILES =====================
+function drawTile(col, row) {
+  const x = col * TILE;
+  const y = row * TILE;
+  const t = MAP[row][col];
+
+  // Base grass
+  ctx.fillStyle = (col + row) % 2 === 0 ? COLORS.grass1 : COLORS.grass2;
+  ctx.fillRect(x, y, TILE, TILE);
+
+  switch(t) {
+    case 1: // Path
+      ctx.fillStyle = COLORS.path;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = COLORS.pathDark;
+      for (let i = 0; i < 3; i++) {
+        const px = x + ((col * 7 + i * 11) % 28) + 2;
+        const py = y + ((row * 5 + i * 13) % 28) + 2;
+        ctx.fillRect(px, py, 2, 2);
+      }
+      break;
+    case 2: // Water
+      ctx.fillStyle = COLORS.water;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = COLORS.waterLight;
+      const waveOff = (Date.now() / 500 + col) % 4;
+      ctx.fillRect(x + 4 + waveOff * 2, y + 8, 8, 2);
+      ctx.fillRect(x + 12 - waveOff, y + 20, 10, 2);
+      break;
+    case 3: // Wall
+      ctx.fillStyle = COLORS.wall;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = COLORS.wallDark;
+      ctx.fillRect(x, y, TILE, 2);
+      ctx.fillRect(x, y + 15, TILE, 2);
+      // Window on some walls
+      if ((col + row) % 3 === 0) {
+        ctx.fillStyle = COLORS.window_c;
+        ctx.fillRect(x + 10, y + 8, 12, 12);
+        ctx.fillStyle = COLORS.wallDark;
+        ctx.fillRect(x + 15, y + 8, 2, 12);
+        ctx.fillRect(x + 10, y + 13, 12, 2);
+      }
+      break;
+    case 4: // Roof
+      ctx.fillStyle = COLORS.roof;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = COLORS.roofDark;
+      for (let i = 0; i < TILE; i += 8) {
+        ctx.fillRect(x + i, y + (i % 16 < 8 ? 0 : 4), 8, 2);
+      }
+      break;
+    case 5: // Door
+      ctx.fillStyle = COLORS.wall;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = COLORS.door;
+      ctx.fillRect(x + 8, y + 4, 16, 28);
+      ctx.fillStyle = COLORS.pathDark;
+      ctx.fillRect(x + 20, y + 16, 3, 3);
+      break;
+    case 6: // Tree
+      ctx.fillStyle = COLORS.trunk;
+      ctx.fillRect(x + 12, y + 18, 8, 14);
+      ctx.fillStyle = COLORS.tree;
+      ctx.fillRect(x + 4, y + 2, 24, 20);
+      ctx.fillStyle = COLORS.treeDark;
+      ctx.fillRect(x + 8, y + 6, 16, 12);
+      break;
+    case 7: // Fence
+      ctx.fillStyle = COLORS.fence;
+      ctx.fillRect(x, y + 12, TILE, 4);
+      ctx.fillRect(x + 4, y + 4, 4, 24);
+      ctx.fillRect(x + 24, y + 4, 4, 24);
+      break;
+    case 8: // Flower
+      const fc = [COLORS.flower1, COLORS.flower2, COLORS.flower3][(col * 3 + row * 7) % 3];
+      ctx.fillStyle = '#3a7a2a';
+      ctx.fillRect(x + 14, y + 16, 4, 14);
+      ctx.fillStyle = fc;
+      ctx.fillRect(x + 10, y + 10, 12, 10);
+      ctx.fillStyle = '#f0e060';
+      ctx.fillRect(x + 14, y + 13, 4, 4);
+      break;
+    case 9: // Bridge
+      ctx.fillStyle = COLORS.water;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = COLORS.path;
+      ctx.fillRect(x, y + 4, TILE, TILE - 8);
+      ctx.fillStyle = COLORS.wallDark;
+      ctx.fillRect(x, y + 4, TILE, 2);
+      ctx.fillRect(x, y + TILE - 6, TILE, 2);
+      break;
+  }
+}
+
+// ===================== DRAW CHARACTER =====================
+function drawCharacter(col, row, dir, skinColor, hairColor, outfitColor, outfitColor2, isPlayer) {
+  const x = col * TILE;
+  const y = row * TILE;
+  const sc = skinColor;
+  const hc = hairColor;
+  const oc = outfitColor;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(x + 6, y + 28, 20, 4);
+
+  // Body
+  ctx.fillStyle = oc;
+  ctx.fillRect(x + 8, y + 14, 16, 14);
+
+  // Outfit detail
+  if (outfitColor2) {
+    ctx.fillStyle = outfitColor2;
+    ctx.fillRect(x + 14, y + 14, 4, 14);
+  }
+
+  // Head
+  ctx.fillStyle = sc;
+  ctx.fillRect(x + 10, y + 4, 12, 12);
+
+  // Hair
+  ctx.fillStyle = hc;
+  if (dir === 0) { // down
+    ctx.fillRect(x + 8, y + 2, 16, 6);
+    ctx.fillRect(x + 8, y + 2, 4, 12);
+    ctx.fillRect(x + 20, y + 2, 4, 12);
+  } else if (dir === 1) { // up
+    ctx.fillRect(x + 8, y + 2, 16, 10);
+  } else if (dir === 2) { // left
+    ctx.fillRect(x + 8, y + 2, 14, 6);
+    ctx.fillRect(x + 8, y + 2, 4, 14);
+  } else { // right
+    ctx.fillRect(x + 10, y + 2, 14, 6);
+    ctx.fillRect(x + 20, y + 2, 4, 14);
+  }
+
+  // Eyes
+  if (dir !== 1) {
+    ctx.fillStyle = '#2a2a2a';
+    if (dir === 0) {
+      ctx.fillRect(x + 13, y + 9, 2, 3);
+      ctx.fillRect(x + 19, y + 9, 2, 3);
+    } else if (dir === 2) {
+      ctx.fillRect(x + 12, y + 9, 2, 3);
+      ctx.fillRect(x + 17, y + 9, 2, 3);
+    } else {
+      ctx.fillRect(x + 15, y + 9, 2, 3);
+      ctx.fillRect(x + 20, y + 9, 2, 3);
+    }
+  }
+
+  // Player indicator
+  if (isPlayer) {
+    ctx.fillStyle = '#f0c0dd';
+    ctx.fillRect(x + 14, y - 4, 4, 4);
+    ctx.fillRect(x + 12, y - 2, 8, 2);
+  }
+}
+
+// ===================== NPCs =====================
+const npcs = [
+  {
+    id: 'rosa',
+    name: 'Rosa',
+    col: 7, row: 3,
+    dir: 0,
+    skin: COLORS.skin1, hair: COLORS.hair_pink, outfit: COLORS.dress_pink, outfit2: '#f0f0f0',
+    personality: 'amable',
+    questDone: false,
+    hasItem: 'Cepillo de Seda',
+    needsItem: null,
+    phase: 0,
+  },
+  {
+    id: 'carmen',
+    name: 'Carmen',
+    col: 12, row: 3,
+    dir: 0,
+    skin: COLORS.skin2, hair: COLORS.hair_black, outfit: COLORS.dress_purple, outfit2: '#d4a030',
+    personality: 'orgullosa',
+    questDone: false,
+    hasItem: 'Esencia de Rosas',
+    needsItem: 'Tela de Encaje',
+    phase: 0,
+  },
+  {
+    id: 'lucia',
+    name: 'Lucia',
+    col: 1, row: 9,
+    dir: 3,
+    skin: COLORS.skin3, hair: COLORS.hair_blonde, outfit: COLORS.dress_blue, outfit2: null,
+    personality: 'timida',
+    questDone: false,
+    hasItem: 'Tela de Encaje',
+    needsItem: 'Perlas del Rio',
+    phase: 0,
+  },
+  {
+    id: 'elena',
+    name: 'Elena',
+    col: 18, row: 9,
+    dir: 2,
+    skin: COLORS.skin1, hair: COLORS.hair_red, outfit: COLORS.dress_green, outfit2: '#2a6a2a',
+    personality: 'aventurera',
+    questDone: false,
+    hasItem: 'Perlas del Rio',
+    needsItem: 'Esencia de Rosas',
+    phase: 0,
+  },
+  {
+    id: 'abuela',
+    name: 'Abuela Maria',
+    col: 4, row: 13,
+    dir: 0,
+    skin: COLORS.skin3, hair: COLORS.hair_white, outfit: COLORS.dress_red, outfit2: COLORS.apron,
+    personality: 'sabia',
+    questDone: false,
+    hasItem: 'Plancha de Vapor',
+    needsItem: 'Cepillo de Seda',
+    phase: 0,
+  },
+  {
+    id: 'sofia',
+    name: 'Sofia',
+    col: 14, row: 13,
+    dir: 0,
+    skin: COLORS.skin2, hair: COLORS.hair_brown, outfit: COLORS.dress_yellow, outfit2: '#b0966a',
+    personality: 'curiosa',
+    questDone: false,
+    hasItem: null,
+    needsItem: null,
+    isShopkeeper: true,
+    phase: 0,
+  },
+];
+
+// ===================== DIALOGUE TREES =====================
+// Quest chain:
+// Rosa gives Cepillo de Seda freely (she's kind)
+// Give Cepillo de Seda to Abuela Maria -> get Plancha de Vapor... wait let me redesign.
+//
+// Chain:
+// 1. Rosa (amable) - gives "Cepillo de Seda" for free if you're nice
+// 2. Give "Cepillo de Seda" to Abuela Maria -> she gives "Perlas del Rio"...
+//
+// Let me simplify the chain:
+// Rosa (kind) -> gives "Cepillo de Seda" (free, be nice)
+// Abuela Maria needs "Cepillo de Seda" -> gives "Esencia de Rosas"
+// Carmen needs "Esencia de Rosas" -> gives "Tela de Encaje"
+// Lucia needs "Tela de Encaje" -> gives "Perlas del Rio"
+// Elena needs "Perlas del Rio" -> gives "Broche Dorado"
+// Sofia (shopkeeper) needs "Broche Dorado" -> gives the final prize "Plancha de Vapor de Agua"
+
+const DIALOGUES = {
+  rosa: {
+    // Phase 0: Initial greeting
+    0: {
+      text: "Hola, cielito! Bienvenida a Villa Belleza. Soy Rosa, la peluquera del pueblo. Noto que eres nueva por aqui... Te puedo ayudar con algo?",
+      choices: [
+        { text: "Hola Rosa! Que lugar tan bonito. Me encanta tu salon!", correct: true, response: "Ay, que dulce eres! Me alegra que te guste. Sabes que? Tengo un Cepillo de Seda especial que ya no uso. Te lo regalo, seguro le encontraras buen uso. Habla con los demas vecinos, todos tienen algo que necesitan!" },
+        { text: "Necesito cosas. Dame lo que tengas.", correct: false, response: "Ay, mi nina... aqui en el pueblo nos tratamos con carino. Vuelve cuando quieras conversar con mas calma, si?" },
+        { text: "Este pueblo se ve aburrido.", correct: false, response: "Aburrido? Ja! Aqui pasan mas cosas de las que imaginas. Pero primero hay que ganarse la confianza de la gente, corazon." },
+      ],
+      giveOnCorrect: 'Cepillo de Seda',
+    },
+    1: {
+      text: "Que bueno verte de nuevo! Espero que el cepillo te sea util. Habla con la Abuela Maria, al sur del rio. Ella siempre necesita ayuda.",
+      choices: null,
+    },
+  },
+
+  abuela: {
+    0: {
+      text: "Ah, una jovencita! Soy la Abuela Maria. Llevo anos haciendo las mejores cremas del pueblo. Pero ultimamente me falta un buen cepillo para mezclar mis preparaciones...",
+      choices: [
+        { text: "Abuela, tengo este Cepillo de Seda. Se lo ofrezco con mucho gusto.", correct: true, needsItem: 'Cepillo de Seda', response: "Dios mio, es perfecto! Eres un angel! Toma, quiero darte esta Esencia de Rosas que prepare esta manana. Es de las mejores que he hecho." },
+        { text: "Que me das a cambio si te ayudo?", correct: false, response: "Ay, mijita... la generosidad no se mide en trueques. Ayudar es su propia recompensa. Vuelve cuando lo entiendas." },
+        { text: "No tengo tiempo para historias, abuela.", correct: false, response: "La juventud de hoy... Bueno, cuando tengas paciencia, aqui estare." },
+      ],
+      giveOnCorrect: 'Esencia de Rosas',
+      takeOnCorrect: 'Cepillo de Seda',
+    },
+    1: {
+      text: "Gracias por el cepillo, mi nina! Mis cremas van a quedar perfectas. Carmen, la modista, vive al norte. Es un poco orgullosa, pero tiene buen corazon.",
+      choices: null,
+    },
+  },
+
+  carmen: {
+    0: {
+      text: "Buenos dias. Soy Carmen, la mejor modista de Villa Belleza... no, de toda la region. Estoy creando mi obra maestra, pero necesito una Esencia de Rosas para tenir la tela con el color perfecto.",
+      choices: [
+        { text: "Dona Carmen, he escuchado que es la mejor artista textil del pueblo. Le traigo esta Esencia de Rosas, digna de su talento.", correct: true, needsItem: 'Esencia de Rosas', response: "Vaya, vaya... alguien que reconoce el verdadero arte! Esta esencia es exquisita. Mereces algo especial. Toma esta Tela de Encaje, una de mis mejores creaciones." },
+        { text: "Tengo Esencia de Rosas. La quieres o no?", correct: false, response: "Que modales! Carmen Rodriguez no acepta regalos de gente sin educacion. Vuelve con mas respeto." },
+        { text: "No creo que seas tan buena modista como dices.", correct: false, response: "Disculpa?! Vete de aqui antes de que me enfade! No tienes idea de con quien hablas." },
+      ],
+      giveOnCorrect: 'Tela de Encaje',
+      takeOnCorrect: 'Esencia de Rosas',
+    },
+    1: {
+      text: "Esta esencia es divina! El color va a quedar perfecto. Lucia, la chica timida que vive cerca del rio, es buena costurera. Quizas necesite tela.",
+      choices: null,
+    },
+  },
+
+  lucia: {
+    0: {
+      text: "A-ah... hola... Soy Lucia. Perdon, no soy muy buena hablando con desconocidos... Estoy intentando hacer un vestido, pero no tengo tela bonita...",
+      choices: [
+        { text: "Tranquila, Lucia. No hay prisa. Mira, te traje esta Tela de Encaje. Es muy bonita, como tu.", correct: true, needsItem: 'Tela de Encaje', response: "D-de verdad? Para mi? Es... es la tela mas bonita que he visto! Gracias... Toma, quiero darte estas Perlas del Rio. Las encuentro en la orilla cada manana." },
+        { text: "Oye, necesitas esto o que? Toma la tela.", correct: false, response: "A-ah! No me grites, por favor... M-mejor vuelve otro dia... cuando estes mas tranquila..." },
+        { text: "Deberias ser menos timida. Asi no vas a llegar a nada.", correct: false, response: "*se pone roja* Y-ya lo se... p-pero no es tan facil... Por favor, dejame sola..." },
+      ],
+      giveOnCorrect: 'Perlas del Rio',
+      takeOnCorrect: 'Tela de Encaje',
+    },
+    1: {
+      text: "G-gracias por la tela... Voy a hacer el vestido mas bonito! Elena, la chica aventurera del otro lado del pueblo, siempre busca cosas bonitas para sus viajes.",
+      choices: null,
+    },
+  },
+
+  elena: {
+    0: {
+      text: "Hey! Soy Elena. Acabo de volver de explorar las montanas! Estoy buscando Perlas del Rio para decorar mi diario de viajes. Son imposibles de encontrar alla arriba!",
+      choices: [
+        { text: "Que aventura! Mira, encontre estas Perlas del Rio. Seguro quedaran increibles en tu diario!", correct: true, needsItem: 'Perlas del Rio', response: "No puede ser! Son perfectas! Eres genial! Mira, te doy este Broche Dorado que encontre en unas ruinas antiguas. Es precioso, seguro le das mejor uso que yo." },
+        { text: "Te vendo las perlas. Cuanto me das?", correct: false, response: "Vender? La aventura no se trata de dinero! Se trata de compartir experiencias. Piensalo y vuelve." },
+        { text: "Las montanas no pueden ser tan impresionantes.", correct: false, response: "No has visto lo que yo he visto! Hay un mundo increible alla afuera. Pero bueno, cada quien con sus gustos..." },
+      ],
+      giveOnCorrect: 'Broche Dorado',
+      takeOnCorrect: 'Perlas del Rio',
+    },
+    1: {
+      text: "Estas perlas van a hacer mi diario espectacular! Oye, Sofia la de la tienda al sur busca un broche especial. Deberias visitarla!",
+      choices: null,
+    },
+  },
+
+  sofia: {
+    0: {
+      text: "Bienvenida a mi tienda! Soy Sofia. Vendo de todo un poco. Sabes, llevo semanas buscando un Broche Dorado para completar mi coleccion. Si alguien me trajera uno, le daria algo muy especial a cambio...",
+      choices: [
+        { text: "Sofia, mira lo que tengo! Este Broche Dorado seria perfecto para tu coleccion, no crees?", correct: true, needsItem: 'Broche Dorado', response: "AYYY! No lo puedo creer! Es el broche que he buscado por anos! Eres increible! Mira, tengo algo MUY especial para ti. Es una Plancha de Vapor de Agua, la ultima tecnologia en cuidado del cabello. Alisa el pelo con vapor de agua, sin danarlo! Te la has ganado!" },
+        { text: "Tengo un broche. Que vas a darme?", correct: false, response: "Mmm, asi no funcionan las cosas en Villa Belleza. Aqui valoramos la amabilidad. Intentalo de nuevo con mas entusiasmo!" },
+        { text: "Tu tienda no tiene nada interesante.", correct: false, response: "Oye! Tengo las mejores cosas del pueblo! Solo hay que saber mirar. Vuelve con mejor actitud." },
+      ],
+      giveOnCorrect: 'Plancha de Vapor',
+      takeOnCorrect: 'Broche Dorado',
+      isFinal: true,
+    },
+    1: {
+      text: "Disfruta tu Plancha de Vapor de Agua! Es magica, te lo prometo. Has ayudado a todo el pueblo, eres una verdadera amiga de Villa Belleza!",
+      choices: null,
+    },
+  },
+};
+
+// ===================== GAME STATE =====================
+let player = { col: 9, row: 7, dir: 0 };
+let inventory = [];
+let questsCompleted = 0;
+const TOTAL_QUESTS = 6;
+let inDialogue = false;
+let currentDialogue = null;
+let dialogueWaiting = false;
+let gameStarted = false;
+let gameWon = false;
+
+// ===================== INVENTORY UI =====================
+function updateInventoryUI() {
+  const bar = document.getElementById('inventoryBar');
+  bar.innerHTML = '<span id="inventoryLabel">Objetos:</span>';
+  if (inventory.length === 0) {
+    const el = document.createElement('span');
+    el.className = 'inv-item';
+    el.textContent = '(vacio)';
+    bar.appendChild(el);
+  } else {
+    inventory.forEach(item => {
+      const el = document.createElement('span');
+      el.className = 'inv-item';
+      el.textContent = item;
+      bar.appendChild(el);
+    });
+  }
+  document.getElementById('questProgress').textContent = questsCompleted + '/' + TOTAL_QUESTS;
+}
+
+// ===================== DIALOGUE SYSTEM =====================
+function showDialogue(npc) {
+  const data = DIALOGUES[npc.id];
+  if (!data) return;
+  const phaseData = data[npc.phase];
+  if (!phaseData) return;
+
+  inDialogue = true;
+  currentDialogue = { npc, phaseData };
+
+  const box = document.getElementById('dialogueBox');
+  const nameEl = document.getElementById('speakerName');
+  const textEl = document.getElementById('dialogueText');
+  const choicesEl = document.getElementById('choicesContainer');
+  const hintEl = document.getElementById('continueHint');
+
+  box.style.display = 'block';
+  nameEl.textContent = npc.name;
+  textEl.textContent = phaseData.text;
+  choicesEl.innerHTML = '';
+  hintEl.textContent = '';
+
+  if (phaseData.choices) {
+    phaseData.choices.forEach((choice, i) => {
+      // Check if choice requires an item the player doesn't have
+      if (choice.needsItem && !inventory.includes(choice.needsItem)) {
+        // Show but disable
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = choice.text;
+        btn.style.opacity = '0.4';
+        btn.style.borderColor = '#666';
+        btn.addEventListener('click', () => {
+          textEl.textContent = "Necesitas tener el objeto correcto primero...";
+          choicesEl.innerHTML = '';
+          dialogueWaiting = true;
+          hintEl.textContent = '[ Toca para continuar ]';
+        });
+        choicesEl.appendChild(btn);
+        return;
+      }
+
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = choice.text;
+      btn.addEventListener('click', () => {
+        if (choice.correct) {
+          // Give/take items
+          if (phaseData.takeOnCorrect) {
+            inventory = inventory.filter(it => it !== phaseData.takeOnCorrect);
+          }
+          if (phaseData.giveOnCorrect) {
+            inventory.push(phaseData.giveOnCorrect);
+          }
+          npc.phase = 1;
+          npc.questDone = true;
+          questsCompleted++;
+          updateInventoryUI();
+
+          textEl.textContent = choice.response;
+          choicesEl.innerHTML = '';
+          dialogueWaiting = true;
+          hintEl.textContent = '[ Toca para continuar ]';
+
+          // Check win
+          if (phaseData.isFinal) {
+            dialogueWaiting = false;
+            setTimeout(() => {
+              closeDialogue();
+              showWinScreen();
+            }, 2000);
+          }
+        } else {
+          textEl.textContent = choice.response;
+          choicesEl.innerHTML = '';
+          dialogueWaiting = true;
+          hintEl.textContent = '[ Toca para continuar ]';
+        }
+      });
+      choicesEl.appendChild(btn);
+    });
+  } else {
+    // No choices, just text
+    dialogueWaiting = true;
+    hintEl.textContent = '[ Toca para continuar ]';
+  }
+}
+
+function closeDialogue() {
+  document.getElementById('dialogueBox').style.display = 'none';
+  inDialogue = false;
+  currentDialogue = null;
+  dialogueWaiting = false;
+}
+
+// Click/tap to continue dialogue
+document.getElementById('dialogueBox').addEventListener('click', (e) => {
+  if (e.target.classList.contains('choice-btn')) return;
+  if (dialogueWaiting) {
+    closeDialogue();
+  }
+});
+
+// ===================== INTERACTION =====================
+function getFacingTile() {
+  let tc = player.col, tr = player.row;
+  if (player.dir === 0) tr++;
+  else if (player.dir === 1) tr--;
+  else if (player.dir === 2) tc--;
+  else tc++;
+  return { col: tc, row: tr };
+}
+
+function tryInteract() {
+  if (inDialogue) return;
+  const facing = getFacingTile();
+  for (const npc of npcs) {
+    if (npc.col === facing.col && npc.row === facing.row) {
+      showDialogue(npc);
+      return;
+    }
+  }
+}
+
+// ===================== NEARBY NPC CHECK =====================
+function isNearNPC() {
+  const facing = getFacingTile();
+  return npcs.some(n => n.col === facing.col && n.row === facing.row);
+}
+
+// ===================== MOVEMENT =====================
+const keys = {};
+function movePlayer(dir) {
+  if (inDialogue || gameWon) return;
+  player.dir = dir;
+  let nc = player.col, nr = player.row;
+  if (dir === 0) nr++;
+  else if (dir === 1) nr--;
+  else if (dir === 2) nc--;
+  else nc++;
+  if (!isSolid(nc, nr)) {
+    player.col = nc;
+    player.row = nr;
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!gameStarted || gameWon) return;
+  if (inDialogue) return;
+  switch(e.key) {
+    case 'ArrowUp': case 'w': case 'W': movePlayer(1); break;
+    case 'ArrowDown': case 's': case 'S': movePlayer(0); break;
+    case 'ArrowLeft': case 'a': case 'A': movePlayer(2); break;
+    case 'ArrowRight': case 'd': case 'D': movePlayer(3); break;
+    case ' ': case 'Enter': case 'e': case 'E': tryInteract(); break;
+  }
+  e.preventDefault();
+});
+
+// ===================== MOBILE CONTROLS =====================
+function setupMobile() {
+  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (isMobile) {
+    document.getElementById('dpad').style.display = 'block';
+    document.getElementById('actionBtn').style.display = 'block';
+  }
+
+  let moveInterval = null;
+  function startMove(dir) {
+    movePlayer(dir);
+    clearInterval(moveInterval);
+    moveInterval = setInterval(() => movePlayer(dir), 180);
+  }
+  function stopMove() {
+    clearInterval(moveInterval);
+    moveInterval = null;
+  }
+
+  ['up','down','left','right'].forEach((d, i) => {
+    const dirs = [1, 0, 2, 3];
+    const btn = document.getElementById('dpad-' + d);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(dirs[i]); });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); stopMove(); });
+    btn.addEventListener('mousedown', () => startMove(dirs[i]));
+    btn.addEventListener('mouseup', stopMove);
+    btn.addEventListener('mouseleave', stopMove);
+  });
+
+  document.getElementById('actionBtn').addEventListener('click', tryInteract);
+  document.getElementById('actionBtn').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    tryInteract();
+  });
+}
+
+// ===================== NPC PROXIMITY INDICATOR =====================
+function drawNPCIndicator(npc) {
+  const x = npc.col * TILE + TILE / 2;
+  const y = npc.row * TILE - 6;
+  const bob = Math.sin(Date.now() / 300) * 2;
+
+  if (!npc.questDone) {
+    // Exclamation mark for active quest
+    ctx.fillStyle = '#f0e040';
+    ctx.fillRect(x - 2, y - 8 + bob, 4, 8);
+    ctx.fillRect(x - 2, y + 2 + bob, 4, 3);
+  } else {
+    // Checkmark for completed
+    ctx.fillStyle = '#40e040';
+    ctx.fillRect(x - 4, y - 2 + bob, 3, 3);
+    ctx.fillRect(x - 1, y + 1 + bob, 3, 3);
+    ctx.fillRect(x + 2, y - 2 + bob, 3, 3);
+    ctx.fillRect(x + 2, y - 5 + bob, 3, 3);
+  }
+}
+
+// ===================== WIN SCREEN =====================
+function showWinScreen() {
+  gameWon = true;
+  const ws = document.getElementById('winScreen');
+  ws.style.display = 'flex';
+  document.getElementById('winContent').innerHTML = `
+    <p style="font-size: 18px; color: #f0c0dd; margin-bottom: 16px;">Felicidades!</p>
+    <p>Has ayudado a todos los habitantes de Villa Belleza y has conseguido la legendaria <strong style="color:#f0c0dd">Plancha de Vapor de Agua</strong>!</p>
+    <p style="margin-top: 12px;">Esta plancha magica usa vapor de agua para alisar el cabello sin danarlo. Es el secreto de belleza mejor guardado del pueblo!</p>
+    <p style="margin-top: 16px; color: #f0c0dd;">Gracias por ser una amiga increible para todo el pueblo!</p>
+    <div style="margin-top: 24px; font-size: 40px;">&#10024; &#128135; &#10024;</div>
+    <p style="margin-top: 16px; font-size: 12px; color: #a080b0;">Villa Belleza - Fin</p>
+  `;
+}
+
+// ===================== RENDER LOOP =====================
+function draw() {
+  if (!gameStarted) { requestAnimationFrame(draw); return; }
+
+  ctx.clearRect(0, 0, gameW, gameH);
+
+  // Draw tiles
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      drawTile(c, r);
+    }
+  }
+
+  // Draw NPCs and player sorted by row for depth
+  const entities = [...npcs.map(n => ({...n, isNPC: true})), { ...player, isNPC: false }];
+  entities.sort((a, b) => a.row - b.row);
+
+  for (const e of entities) {
+    if (e.isNPC) {
+      const npc = npcs.find(n => n.id === e.id);
+      drawCharacter(e.col, e.row, e.dir, e.skin, e.hair, e.outfit, e.outfit2, false);
+      drawNPCIndicator(npc);
+    } else {
+      drawCharacter(e.col, e.row, e.dir, COLORS.skin1, COLORS.hair_brown, '#e080b0', '#f0c0dd', true);
+    }
+  }
+
+  // Action button hint
+  if (isNearNPC() && !inDialogue) {
+    document.getElementById('actionBtn').style.background = 'rgba(230, 160, 196, 0.7)';
+  } else {
+    document.getElementById('actionBtn').style.background = 'rgba(230, 160, 196, 0.35)';
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// ===================== START =====================
+document.getElementById('startBtn').addEventListener('click', () => {
+  gameStarted = true;
+  document.getElementById('titleScreen').style.display = 'none';
+  setupMobile();
+  updateInventoryUI();
+});
+
+draw();
+</script>
+</body>
+</html>
